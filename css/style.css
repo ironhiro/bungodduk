@@ -11,11 +11,9 @@ html {
   width: 100%;
   perspective: 800;
   position: absolute;
-  
 }
 
 .cube {
-  top: 200px;
   position: relative;
   margin: 0 auto;
   height: 200px;
@@ -43,7 +41,6 @@ html {
   align-items: center;
   display: flex;
   opacity: .8;
-  top:100%;
 }
 
 .cube > div:hover {
