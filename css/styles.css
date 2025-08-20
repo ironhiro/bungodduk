@@ -1,0 +1,127 @@
+:root{
+    --bg: #273e81;
+    --cube-bg: #ffd400; /* yellow */
+    --cube-text: #000000; /* 검은색 */
+    --face-padding: 12px; /* 세로 여백 소폭 증가 */
+  }
+  
+  *{ box-sizing: border-box; }
+  
+  html, body {
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: var(--bg);
+    overflow: hidden;
+    font-family: 'Black Han Sans', system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+  }
+  
+  #stage {
+    position: fixed;
+    inset: 0;
+    perspective: 900px;
+    transform-style: preserve-3d;
+  }
+  
+  /* A single cube “entity” has a position wrapper and the rotating cube inside */
+  .cube-entity {
+    position: absolute;
+    will-change: transform;
+    transform-style: preserve-3d;
+  }
+  
+  .cube {
+    width: 100%;
+    height: 100%;
+    position: relative;
+    transform-style: preserve-3d;
+    will-change: transform;
+  }
+  
+  /* Bounce squash effect on hit */
+  .cube.hit { animation: squash 180ms ease-out; }
+  @keyframes squash {
+    0%   { transform: var(--rot) scale3d(1,1,1); }
+    50%  { transform: var(--rot) scale3d(1.08,0.92,1.05); }
+    100% { transform: var(--rot) scale3d(1,1,1); }
+  }
+  
+  /* Faces */
+  .face {
+    position: absolute;
+    inset: 0;
+    background: var(--cube-bg);
+    border: 2px solid rgba(0,0,0,0.08);
+    display: flex;
+    align-items: stretch;   /* 세로 공간 계산을 위해 stretch */
+    justify-content: center;
+    color: var(--cube-text);
+    padding: var(--face-padding);
+    backface-visibility: hidden;
+    text-align: center;
+    user-select: none;
+    overflow: hidden; /* 면 밖으로 넘치면 잘라내는 안전장치 */
+  }
+  
+  /* 3줄 스택: 세로 여백을 gap으로 배분 */
+  .face .lines {
+    display: flex;
+    flex-direction: column;
+    justify-content: center; /* 기본값, JS에서 gap을 동적으로 지정 */
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    line-height: 1; /* 가로 폭은 letter-spacing, 세로는 gap으로 조정 */
+    gap: 0px;       /* JS에서 남는 세로공간을 계산해 설정 */
+  }
+  
+  .face .line {
+    display: block;
+    white-space: pre;   /* 공백 보존 */
+    letter-spacing: 0;  /* JS에서 줄별 계산 */
+    margin: 0;
+    padding: 0;
+    text-align: center;
+  }
+  
+  /* Glitch overlay */
+  #glitch {
+    position: fixed;
+    inset: 0;
+    pointer-events: none;
+    opacity: 0;
+    mix-blend-mode: screen;
+    background:
+      repeating-linear-gradient(
+        0deg,
+        rgba(255,255,255,0.08) 0px,
+        rgba(255,255,255,0.08) 2px,
+        transparent 3px,
+        transparent 5px
+      );
+  }
+  #glitch.active { animation: glitchy 650ms steps(6, end) infinite; }
+  @keyframes glitchy {
+    0%   { opacity: 0; transform: translate3d(0,0,0); filter: contrast(100%) hue-rotate(0deg); }
+    10%  { opacity: 1; transform: translate3d(-2px,2px,0) skewX(0.4deg); filter: contrast(150%) hue-rotate(20deg); }
+    25%  { transform: translate3d(4px,-3px,0) skewX(-0.6deg); }
+    45%  { transform: translate3d(-3px,3px,0) skewY(0.5deg); }
+    60%  { transform: translate3d(3px,-2px,0) skewX(0.4deg); }
+    80%  { transform: translate3d(-2px,2px,0) skewY(-0.5deg); }
+    100% { opacity: 0; transform: translate3d(0,0,0); filter: contrast(100%) hue-rotate(0deg); }
+  }
+  
+  /* Optional shadow for depth */
+  .cube-entity::after {
+    content: "";
+    position: absolute;
+    left: 8%;
+    bottom: -6%;
+    width: 84%;
+    height: 14%;
+    background: radial-gradient(ellipse at center, rgba(0,0,0,0.28), rgba(0,0,0,0) 70%);
+    transform: translateZ(-1px);
+    pointer-events: none;
+    filter: blur(6px);
+  }
+  
