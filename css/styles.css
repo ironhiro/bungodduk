@@ -1,6 +1,7 @@
 :root{
     --bg: #273e81;
-    --cube-bg: #ffd400; /* yellow */
+    --cube-bg: 255,218,0; /* yellow */
+    --cube-alpha: 0.4;
     --cube-text: #000000; /* 검은색 */
     --face-padding: 12px; /* 세로 여백 소폭 증가 */
   }
@@ -50,14 +51,14 @@
   .face {
     position: absolute;
     inset: 0;
-    background: var(--cube-bg);
+    background: rgba(var(--cube-bg), var(--cube-alpha));
     border: 2px solid rgba(0,0,0,0.08);
+    backface-visibility: visible;
     display: flex;
     align-items: stretch;   /* 세로 공간 계산을 위해 stretch */
     justify-content: center;
     color: var(--cube-text);
     padding: var(--face-padding);
-    backface-visibility: hidden;
     text-align: center;
     user-select: none;
     overflow: hidden; /* 면 밖으로 넘치면 잘라내는 안전장치 */
