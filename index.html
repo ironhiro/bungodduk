@@ -4,19 +4,85 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>붕오떡</title>
-
-    <!-- Google Font -->
     <link href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&display=swap" rel="stylesheet">
-
-    <!-- Styles -->
     <link rel="stylesheet" href="css/styles.css" />
   </head>
   <body>
+    <!-- Stage -->
     <div id="stage" aria-label="3D Cube Stage"></div>
+
     <!-- Glitch overlay -->
     <div id="glitch" aria-hidden="true"></div>
 
-    <!-- Scripts -->
+    <!-- Settings Panel -->
+    <aside class="panel" id="panel">
+      <header class="panel__header">
+        <span>⚙️ 설정</span>
+        <button id="panelToggle" title="접기/펼치기" aria-expanded="true">▾</button>
+      </header>
+
+      <!-- 토글 애니메이션 대상 -->
+      <div class="panel__body panel-collapsible expanded" id="panelBody">
+        <div class="field">
+          <label>초기 크기 (px)</label>
+          <div class="row">
+            <input id="sizeMin" type="number" min="20" max="1000" value="250"> 
+            <span>~</span>
+            <input id="sizeMax" type="number" min="20" max="1200" value="400">
+          </div>
+          <!-- 힌트/안내 문구 영역 -->
+          <div id="sizeHint" class="hint">
+            초기 크기 변경은 <b>재시작</b>을 눌렀을 때 적용됩니다.
+          </div>
+          <div id="sizeWarn" class="hint" aria-live="polite"></div>
+        </div>
+
+        <div class="field">
+          <label>이동 속도 배율</label>
+          <input id="speedMul" type="range" min="0.5" max="3" step="0.1" value="1.8">
+          <output id="speedMulOut">1.8×</output>
+        </div>
+
+        <div class="field">
+          <label>회전 속도 배율</label>
+          <input id="rotMul" type="range" min="0.5" max="4" step="0.1" value="2.0">
+          <output id="rotMulOut">2.0×</output>
+        </div>
+
+        <div class="field">
+          <label>분열 반발 속도 (px/s)</label>
+          <input id="splitDeflect" type="range" min="60" max="600" step="10" value="220">
+          <output id="splitDeflectOut">220</output>
+        </div>
+
+        <div class="field">
+          <label>벽 튕김 틀기 (px/s)</label>
+          <input id="bounceDeflect" type="range" min="0" max="200" step="5" value="40">
+          <output id="bounceDeflectOut">40</output>
+        </div>
+
+        <div class="field">
+          <label>큐브 배경 불투명도</label>
+          <input id="cubeAlpha" type="range" min="0.1" max="1" step="0.05" value="0.7">
+          <output id="cubeAlphaOut">0.70</output>
+        </div>
+
+        <div class="field">
+          <label>글리치 지속 (초)</label>
+          <input id="glitchSec" type="range" min="0.2" max="10" step="0.2" value="5">
+          <output id="glitchSecOut">5.0s</output>
+        </div>
+
+        <div class="field row">
+          <label class="chk"><input id="impactFx" type="checkbox" checked> 충돌 이펙트 표시</label>
+        </div>
+
+        <div class="panel__actions">
+          <button id="btnReset">초기화/재시작</button>
+        </div>
+      </div>
+    </aside>
+
     <script defer src="js/script.js"></script>
   </body>
 </html>
