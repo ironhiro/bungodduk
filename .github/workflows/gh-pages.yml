@@ -1,0 +1,43 @@
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches: [ main ]   # 기본 브랜치에 맞춰 변경 (main/master)
+  workflow_dispatch:     # 수동 실행도 가능
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - run: npm ci
+      - run: npm run build   # Next build (export 모드면 자동으로 out/ 생성)
+      - run: npx next export # 일부 버전에선 별도 실행이 안정적 (out/ 생성)
+
+      # 프로젝트 페이지인 경우: 404 스파 fallback 겸용을 위해 index.html을 404.html로 복사
+      # - run: cp out/index.html out/404.html
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: ./out
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4

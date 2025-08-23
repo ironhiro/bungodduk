@@ -1,0 +1,17 @@
+:root{
+  --bg: #273e81;
+  --cube-bg-rgb: 255, 212, 0;
+  --cube-alpha: 0.70;
+  --cube-text: #000000;
+  --face-padding: 12px;
+}
+
+*{ box-sizing: border-box; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  background: var(--bg);
+  overflow: hidden;
+  font-family: var(--font-black-han-sans), system-ui, -apple-system, "Segoe UI", Roboto, "Noto Sans KR", Arial, sans-serif;
+}
