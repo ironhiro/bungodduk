@@ -5,6 +5,7 @@ import { useThree, useFrame, } from "@react-three/fiber";
 import * as THREE from "three";
 import { CubeMesh } from "@/components/CubeMesh";
 import { makeFaceCanvasTextureAsync } from "@/lib/makeFaceCanvasTexture";
+import { ImpactMesh, ImpactData } from "@/components/ImpactMesh";
 
 export type CubeConfig = {
   sizeMin: number; sizeMax: number;
@@ -30,29 +31,53 @@ let idSeq = 1;
 
 export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(
   ({ config }, ref) => {
-    const { size: viewport } = useThree();         // 화면 크기
+    const { size: viewport, clock } = useThree();         // 화면 크기
     const W = viewport.width;
     const H = viewport.height;
-    const [cubes, setCubes] = useState<CubeData[]>(() => [makeRandomCube(config, viewport.width, viewport.height)]);
+    // 기존: const [cubes, setCubes] = useState<CubeData[]>(...);
+    const cubesRef = useRef<CubeData[]>([makeRandomCube(config, viewport.width, viewport.height)]);
+
+    // 렌더에 쓰는 건 "id 목록"만 상태로 유지 (추가/삭제 때만 갱신)
+    const [ids, setIds] = useState<number[]>(() => cubesRef.current.map(c => c.id));
     const glitchingRef = useRef(false);
 
    const [materials, setMaterials] = useState<THREE.Material[] | null>(null);
+
+
+    // === 기존 큐브 상태는 ref + ids 패턴을 쓰고 있다고 가정 ===
+    // 아래는 이펙트용 상태/레퍼런스
+    const impactsRef = useRef<ImpactData[]>([]);
+    const [impactIds, setImpactIds] = useState<number[]>([]);
+    const impactSeqRef = useRef(1);
+
+     // 충돌 이펙트 스폰
+    const spawnImpact = (x: number, y: number) => {
+      const id = impactSeqRef.current++;
+      const d: ImpactData = {
+        id, x, y,
+        start: clock.getElapsedTime(),
+        life: 0.45,           // 0.45초 동안 유지
+        size: 28,             // 시작 크기(px)
+      };
+      impactsRef.current = [...impactsRef.current, d];
+      setImpactIds((ids) => [...ids, id]);
+    };
 
     useEffect(() => {
     let alive = true;
     (async () => {
         const tex = await makeFaceCanvasTextureAsync({
-        lines: ["붕 오 떡", "어 볶", "빵 뎅 이"],
-        w: 1024, h: 1024, pad: 64,
-        bgRGBA: [255, 212, 0, Math.round(config.cubeAlpha * 255)],
-        color: "#000000",
-        fontFamily: "'Black Han Sans'"
-        });
-        if (!alive) return;
-        const mat = new THREE.MeshBasicMaterial({
-        map: tex, transparent: true, depthWrite: false, alphaTest: 0.01
-        });
-        setMaterials([0,1,2,3,4,5].map(() => mat));
+      lines: ["붕 오 떡", "어 볶", "빵 뎅 이"],
+      w: 1024, h: 1024, pad: 64,
+      bgRGBA: [255, 212, 0, Math.round(config.cubeAlpha * 255)],
+      color: "#000000",
+      // 여기선 굳이 명시 안 해도 됨. 해도 OK: fontFamily: "'Black Han Sans'",
+    });
+    if (!alive) return;
+    const mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, depthWrite: false, alphaTest: 0.01
+    });
+    setMaterials([0,1,2,3,4,5].map(() => mat));
     })();
     return () => { alive = false; };
     }, [config.cubeAlpha]);
@@ -60,18 +85,20 @@ export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(
     useImperativeHandle(ref, () => ({
       reset() {
         if (glitchingRef.current) return;
-        setCubes([makeRandomCube(config, viewport.width, viewport.height)]);
+        setIds([])
       }
     }), [config, viewport.width, viewport.height]);
 
     // 메인 루프
     useFrame((_, dt) => {
       const dts = Math.min(dt, 0.032);
-      const W = viewport.width;
-      const H = viewport.height;
+      const W = viewport.width, H = viewport.height;
 
-      let changed = false;
-      let next = cubes.map(c => ({ ...c }));
+      // 최신 스냅샷
+      const cur = cubesRef.current;
+      const next = cur.map(c => ({ ...c })); // 위치/회전/충돌/분열 계산은 여기에
+
+       let structureChanged = false;
 
       for (let i = 0; i < next.length; i++) {
         const c = next[i];
@@ -94,40 +121,67 @@ export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(
 
         if (bounced && c.cooldown <= 0) {
           c.cooldown = 120;
-
+          spawnImpact(c.x + c.size / 2, c.y + c.size / 2);
           // 벽에서만 분열(반대축)
           const res = trySplit(c, axis!, config);
           if (res) {
             next.splice(i, 1, res.a, res.b);
-            changed = true;
+            structureChanged = true;
           }
         }
       }
 
       // 글리치 조건
+      // 글리치 트리거도 ref 기준으로
       if (!glitchingRef.current && next.some(c => c.size <= MIN_SIZE)) {
         glitchingRef.current = true;
-        setCubes([]); // 리스트 비움 (구조 변화)
+        cubesRef.current = [];                 // ref 비움
+        setIds([]);                            // 렌더에서도 비우기(구조 변화)
         const g = document.getElementById("glitch");
         if (g) { g.classList.remove("active"); void g.offsetWidth; g.classList.add("active"); }
         setTimeout(() => {
-        if (g) g.classList.remove("active");
-        // materials 준비 전이면 먼저 materials가 준비되었는지 확인
-        const ready = true; // materials가 null 아닌지 체크 가능
-        setCubes([makeRandomCube(config, W, H)]);
-        glitchingRef.current = false;
+          if (g) g.classList.remove("active");
+          const seed = makeRandomCube(config, W, H);
+          cubesRef.current = [seed];
+          setIds([seed.id]);                   // 구조 변화만 setState
+          glitchingRef.current = false;
         }, config.glitchMs);
-        return;
-        }
+        return; // 이 프레임은 종료
+      }
 
-      if (changed) setCubes(next);
-      else if (next !== cubes) setCubes(next);
+      // 최종 반영
+      cubesRef.current = next;
+      if (structureChanged) setIds(next.map(c => c.id)); // 구조 바뀔 때만 setState
+
+
+      // === 이펙트 만료 처리 ===
+      const now = clock.getElapsedTime();
+      const before = impactsRef.current;
+      const after = before.filter((it) => now - it.start < it.life);
+      if (after.length !== before.length) {
+        impactsRef.current = after;
+        setImpactIds(after.map((i) => i.id)); // 구조 변화만 갱신
+      }
     });
 
     return (
       <>
-        {materials && cubes.map(c => (
-        <CubeMesh key={c.id} d={c} W={W} H={H} materials={materials} />
+        {materials && ids.map(id => (
+          <CubeMesh
+            key={id}
+            id={id}
+            getData={() => cubesRef.current.find(c => c.id === id)!}
+            W={W} H={H}
+            materials={materials}
+          />
+        ))}
+
+        {impactIds.map((id) => (
+          <ImpactMesh
+            key={id}
+            W={W} H={H}
+            getData={() => impactsRef.current.find((i) => i.id === id)}
+          />
         ))}
       </>
     );

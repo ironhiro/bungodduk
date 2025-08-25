@@ -1,23 +1,57 @@
 import * as THREE from "three";
 
+// 따옴표 보정
+function quoteFamily(f: string) {
+  const s = f.trim();
+  if (!s) return s;
+  // 이미 따옴표가 있으면 그대로
+  if (s.startsWith("'") || s.startsWith('"')) return s;
+  // 공백/특수문자 포함 시 따옴표로 감싸기
+  return /[^a-zA-Z0-9_-]/.test(s) ? `"${s}"` : s;
+}
+
+// CSS 변수/후보군에서 실제 사용 가능한 패밀리명 고르기
+async function resolveLoadedFamily(prefer?: string) {
+  // 다음 순서로 시도
+  const cssVar =
+    getComputedStyle(document.documentElement).getPropertyValue(
+      "--font-black-han-sans"
+    )?.trim();
+  const candidates = [
+    prefer?.trim(),
+    cssVar,
+    "Black Han Sans", // 공용 이름
+  ].filter(Boolean) as string[];
+
+  // 적당한 크기 하나 지정해서 load/check
+  for (const fam of candidates) {
+    const q = quoteFamily(fam);
+    try {
+      if ((document as any).fonts) {
+        await (document as any).fonts.load(`400 64px ${q}`);
+        const ok = (document as any).fonts.check(`400 32px ${q}`);
+        if (ok) return q;
+      }
+    } catch {
+      // 계속 다음 후보 시도
+    }
+  }
+  // 다 실패하면 마지막 후보 반환
+  return quoteFamily(candidates[candidates.length - 1] || "sans-serif");
+}
+
+
 export async function makeFaceCanvasTextureAsync(opts: {
   lines: string[];
   w: number; h: number; pad: number;
   bgRGBA: [number, number, number, number];
   color: string;
-  fontFamily: string;   // "'Black Han Sans', sans-serif"
+  fontFamily?: string;   // "'Black Han Sans', sans-serif"
 }) {
   const { lines, w, h, pad, bgRGBA, color, fontFamily } = opts;
 
-  // ★ 폰트 로드 대기 (가장 확실)
-  if (document && "fonts" in document) {
-    try {
-      // 특정 크기로 명시적으로 한 번 로드
-      // 가끔 일부 브라우저에서 family만으론 미적용되는 케이스가 있어 weight+size까지 명시
-      await (document as any).fonts.load(`400 64px ${fontFamily}`);
-      await (document as any).fonts.ready;
-    } catch {}
-  }
+  // ★ 실사용 패밀리명 확정 + 로드 대기
+  const fam = await resolveLoadedFamily(fontFamily);
 
   const cnv = document.createElement("canvas");
   cnv.width = w; cnv.height = h;
@@ -33,10 +67,11 @@ export async function makeFaceCanvasTextureAsync(opts: {
 
   let fontSize = Math.floor(h * 0.2);
   const lineH = (fs:number)=> fs * 1.05;
-  const setFont = (fs:number) => (ctx.font = `${fs}px ${fontFamily}`);
 
+  const setFont = (fs:number) => (ctx.font = `900 ${fs}px "Black Han Sans"`);
   ctx.textBaseline = "alphabetic";
   ctx.textAlign = "left";
+
   setFont(fontSize);
   while (lineH(fontSize) * 3 > usableH && fontSize > 6) { fontSize--; setFont(fontSize); }
 
@@ -69,7 +104,6 @@ export async function makeFaceCanvasTextureAsync(opts: {
 
   const tex = new THREE.CanvasTexture(cnv);
   tex.colorSpace = THREE.SRGBColorSpace;
-  // 품질/아티팩트 완화
   tex.minFilter = THREE.LinearMipmapLinearFilter;
   tex.magFilter = THREE.LinearFilter;
   tex.generateMipmaps = true;
