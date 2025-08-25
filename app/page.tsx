@@ -1,56 +1,44 @@
 "use client";
-
 import { Canvas } from "@react-three/fiber";
-import { OrthographicCamera } from "@react-three/drei";
-import ResponsiveOrtho from "@/components/ResponsiveOrtho"
 import { Suspense, useRef, useState } from "react";
+import ResponsiveOrtho from "@/components/ResponsiveOrtho";
 import { CubeField, CubeFieldRef, CubeConfig } from "@/components/CubeField";
 import SettingsPanel from "@/components/SettingsPanel";
 import "@/styles/cube.css";
 
-export default function Page() {
-  const [cfg, setCfg] = useState<CubeConfig>({
+export default function Page(){
+  const [cfg,setCfg] = useState<CubeConfig>({
     sizeMin: 250, sizeMax: 400,
     speedMul: 1.8, rotMul: 2.0,
     splitDeflect: 220, bounceDeflect: 40,
     cubeAlpha: 0.7, glitchMs: 5000
   });
-
-  const [panelOpen, setPanelOpen] = useState(true);
+  const [panelOpen,setPanelOpen]=useState(true);
   const fieldRef = useRef<CubeFieldRef>(null);
 
   return (
     <>
-      <Canvas
-        orthographic
-        // dpr를 좀 안전하게
-        dpr={[1, Math.min(2, typeof window !== "undefined" ? window.devicePixelRatio : 1)]}
-        style={{ position: "fixed", inset: 0 }}
-      >
-        {/* 배경색 */}
+      <Canvas orthographic dpr={[1, Math.min(2, typeof window!=="undefined"? window.devicePixelRatio:1)]} style={{position:"fixed", inset:0}}>
         <color attach="background" args={["#273e81"]} />
-        {/* 수동 프러스텀 */}
         <ResponsiveOrtho />
         <Suspense fallback={null}>
           <CubeField ref={fieldRef} config={cfg} />
         </Suspense>
       </Canvas>
 
-
-      {/* CSS 글리치 오버레이 유지 */}
       <div id="glitch" aria-hidden="true" />
 
       <SettingsPanel
         panelOpen={panelOpen} setPanelOpen={setPanelOpen}
-        sizeMin={cfg.sizeMin} setSizeMin={v => setCfg(s => ({ ...s, sizeMin: v }))}
-        sizeMax={cfg.sizeMax} setSizeMax={v => setCfg(s => ({ ...s, sizeMax: v }))}
-        speedMul={cfg.speedMul} setSpeedMul={v => setCfg(s => ({ ...s, speedMul: v }))}
-        rotMul={cfg.rotMul} setRotMul={v => setCfg(s => ({ ...s, rotMul: v }))}
-        splitDeflect={cfg.splitDeflect} setSplitDeflect={v => setCfg(s => ({ ...s, splitDeflect: v }))}
-        bounceDeflect={cfg.bounceDeflect} setBounceDeflect={v => setCfg(s => ({ ...s, bounceDeflect: v }))}
-        cubeAlpha={cfg.cubeAlpha} setCubeAlpha={v => setCfg(s => ({ ...s, cubeAlpha: v }))}
-        glitchSec={cfg.glitchMs / 1000} setGlitchSec={sec => setCfg(s => ({ ...s, glitchMs: Math.floor(sec * 1000) }))}
-        onReset={() => fieldRef.current?.reset()}
+        sizeMin={cfg.sizeMin} setSizeMin={v=>setCfg(s=>({...s,sizeMin:v}))}
+        sizeMax={cfg.sizeMax} setSizeMax={v=>setCfg(s=>({...s,sizeMax:v}))}
+        speedMul={cfg.speedMul} setSpeedMul={v=>setCfg(s=>({...s,speedMul:v}))}
+        rotMul={cfg.rotMul} setRotMul={v=>setCfg(s=>({...s,rotMul:v}))}
+        splitDeflect={cfg.splitDeflect} setSplitDeflect={v=>setCfg(s=>({...s,splitDeflect:v}))}
+        bounceDeflect={cfg.bounceDeflect} setBounceDeflect={v=>setCfg(s=>({...s,bounceDeflect:v}))}
+        cubeAlpha={cfg.cubeAlpha} setCubeAlpha={v=>setCfg(s=>({...s,cubeAlpha:v}))}
+        glitchSec={cfg.glitchMs/1000} setGlitchSec={sec=>setCfg(s=>({...s,glitchMs: Math.floor(sec*1000)}))}
+        onReset={()=> fieldRef.current?.reset()}
       />
     </>
   );
