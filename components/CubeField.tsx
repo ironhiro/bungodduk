@@ -202,7 +202,20 @@ export const CubeField = forwardRef<CubeFieldRef, CubeFieldProps>(
         // Handle split on bounce
         if (bounced && (cube.cooldown ?? 0) <= 0) {
           cube.cooldown = COOLDOWN_MS;
-          spawnImpact(cube.x + cube.size / 2, cube.y + cube.size / 2);
+
+          // Calculate impact position at the wall, not cube center
+          let impactX = cube.x + cube.size / 2;
+          let impactY = cube.y + cube.size / 2;
+
+          if (axis === "x") {
+            // Left or right wall collision
+            impactX = cube.x === 0 ? 0 : W;
+          } else if (axis === "y") {
+            // Top or bottom wall collision
+            impactY = cube.y === 0 ? 0 : H;
+          }
+
+          spawnImpact(impactX, impactY);
 
           const splitResult = trySplit(cube, axis!, config);
           if (splitResult) {
