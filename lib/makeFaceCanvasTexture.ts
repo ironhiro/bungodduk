@@ -1,86 +1,149 @@
 import * as THREE from "three";
 
-function quoteFamily(f: string){
-  const s = f.trim();
-  if(!s) return s;
-  if(s.startsWith("'")||s.startsWith("\"")) return s;
-  return /[^a-zA-Z0-9_-]/.test(s) ? `"${s}"` : s;
+// Constants
+const FONT_SIZE_RATIO = 0.2;
+const LINE_HEIGHT_MULTIPLIER = 1.05;
+const MIN_FONT_SIZE = 6;
+const MIN_OUTER_RATIO = 0.02;
+const MIN_OUTER_PX = 4;
+const LINE_COUNT = 3;
+const FALLBACK_FONT = "sans-serif";
+
+/**
+ * Quote font family name if it contains special characters
+ */
+function quoteFamily(family: string): string {
+  const trimmed = family.trim();
+  if (!trimmed) return trimmed;
+  if (trimmed.startsWith("'") || trimmed.startsWith('"')) return trimmed;
+  return /[^a-zA-Z0-9_-]/.test(trimmed) ? `"${trimmed}"` : trimmed;
 }
 
-async function resolveLoadedFamily(prefer?: string){
-  const cssVar = getComputedStyle(document.documentElement).getPropertyValue("--font-black-han-sans")?.trim();
-  const candidates = [prefer?.trim(), cssVar, "Black Han Sans"].filter(Boolean) as string[];
-  for(const fam of candidates){
-    const q = quoteFamily(fam);
-    try{
-      if((document as any).fonts){
-        await (document as any).fonts.load(`400 64px ${q}`);
-        const ok = (document as any).fonts.check(`400 32px ${q}`);
-        if(ok) return q;
+/**
+ * Resolve and load the preferred font family using FontFace API
+ */
+async function resolveLoadedFamily(prefer?: string): Promise<string> {
+  const cssVar = getComputedStyle(document.documentElement)
+    .getPropertyValue("--font-black-han-sans")
+    ?.trim();
+
+  const candidates = [prefer?.trim(), cssVar, "Black Han Sans"].filter(
+    (f): f is string => Boolean(f)
+  );
+
+  for (const family of candidates) {
+    const quoted = quoteFamily(family);
+    try {
+      await document.fonts.load(`400 64px ${quoted}`);
+      if (document.fonts.check(`400 32px ${quoted}`)) {
+        return quoted;
       }
-    }catch{}
+    } catch {
+      // Font loading failed, try next candidate
+    }
   }
-  return quoteFamily(candidates[candidates.length-1] || "sans-serif");
+
+  return quoteFamily(candidates.at(-1) ?? FALLBACK_FONT);
 }
 
-export async function makeFaceCanvasTextureAsync(opts: {
-  lines: string[];
-  w: number; h: number; pad: number;
-  bgRGBA: [number,number,number,number];
-  color: string;
-  fontFamily?: string;
-}){
+export interface TextureOptions {
+  readonly lines: string[];
+  readonly w: number;
+  readonly h: number;
+  readonly pad: number;
+  readonly bgRGBA: readonly [number, number, number, number];
+  readonly color: string;
+  readonly fontFamily?: string;
+}
+
+/**
+ * Create a canvas texture with text for cube faces
+ */
+export async function makeFaceCanvasTextureAsync(
+  opts: TextureOptions
+): Promise<THREE.CanvasTexture> {
   const { lines, w, h, pad, bgRGBA, color, fontFamily } = opts;
-  const fam = await resolveLoadedFamily(fontFamily);
+  const family = await resolveLoadedFamily(fontFamily);
 
-  const cnv = document.createElement("canvas");
-  cnv.width = w; cnv.height = h;
-  const ctx = cnv.getContext("2d")!;
-  ctx.clearRect(0,0,w,h);
+  // Create canvas
+  const canvas = document.createElement("canvas");
+  canvas.width = w;
+  canvas.height = h;
 
-  ctx.fillStyle = `rgba(${bgRGBA[0]},${bgRGBA[1]},${bgRGBA[2]},${bgRGBA[3]/255})`;
-  ctx.fillRect(0,0,w,h);
+  const ctx = canvas.getContext("2d")!;
+  ctx.clearRect(0, 0, w, h);
 
-  const usableW = w - pad*2;
-  const usableH = h - pad*2;
+  // Draw background
+  const [r, g, b, a] = bgRGBA;
+  ctx.fillStyle = `rgba(${r},${g},${b},${a / 255})`;
+  ctx.fillRect(0, 0, w, h);
 
-  let fontSize = Math.floor(h*0.2);
-  const lineH = (fs:number)=> fs*1.05;
-  const setFont = (fs:number)=> (ctx.font = `900 ${fs}px ${fam}`);
-  ctx.textBaseline="alphabetic"; ctx.textAlign="left";
+  const usableW = w - pad * 2;
+  const usableH = h - pad * 2;
+
+  // Calculate font size
+  const lineHeight = (fs: number) => fs * LINE_HEIGHT_MULTIPLIER;
+  const setFont = (fs: number) => {
+    ctx.font = `900 ${fs}px ${family}`;
+  };
+
+  ctx.textBaseline = "alphabetic";
+  ctx.textAlign = "left";
+
+  let fontSize = Math.floor(h * FONT_SIZE_RATIO);
   setFont(fontSize);
-  while(lineH(fontSize)*3 > usableH && fontSize>6){ fontSize--; setFont(fontSize); }
 
-  const widthOf = (t:string)=> ctx.measureText(t.split("").join("")).width;
-  while(Math.max(...lines.map(widthOf)) > usableW && fontSize>6){ fontSize--; setFont(fontSize); }
+  // Shrink font to fit height
+  while (lineHeight(fontSize) * LINE_COUNT > usableH && fontSize > MIN_FONT_SIZE) {
+    fontSize--;
+    setFont(fontSize);
+  }
 
-  const total = lineH(fontSize)*3;
-  const minOuter = Math.max(4, h*0.02);
-  const leftover = Math.max(0, (usableH - total) - minOuter*2);
-  const gap = leftover>0 ? leftover/2 : 0;
-  const y0 = pad + minOuter + fontSize;
+  // Measure text width
+  const measureWidth = (text: string) =>
+    ctx.measureText([...text].join("")).width;
 
+  // Shrink font to fit width
+  while (
+    Math.max(...lines.map(measureWidth)) > usableW &&
+    fontSize > MIN_FONT_SIZE
+  ) {
+    fontSize--;
+    setFont(fontSize);
+  }
+
+  // Calculate vertical layout
+  const totalHeight = lineHeight(fontSize) * LINE_COUNT;
+  const minOuter = Math.max(MIN_OUTER_PX, h * MIN_OUTER_RATIO);
+  const leftover = Math.max(0, usableH - totalHeight - minOuter * 2);
+  const gap = leftover > 0 ? leftover / 2 : 0;
+  const startY = pad + minOuter + fontSize;
+
+  // Draw text
   ctx.fillStyle = color;
 
-  lines.forEach((text,i)=>{
+  lines.forEach((text, lineIndex) => {
     const chars = [...text];
-    const gaps = Math.max(1, chars.length-1);
-    const rawW = widthOf(text);
-    const spacing = gaps>0 ? Math.max(0, (usableW - rawW)/gaps) : 0;
-    const baseX = pad;
-    const y = y0 + i*(lineH(fontSize)+gap);
-    let x = baseX;
-    for(const ch of chars){
-      ctx.fillText(ch, x, y);
-      x += ctx.measureText(ch).width + spacing;
+    const gapCount = Math.max(1, chars.length - 1);
+    const textWidth = measureWidth(text);
+    const spacing = gapCount > 0 ? Math.max(0, (usableW - textWidth) / gapCount) : 0;
+
+    const y = startY + lineIndex * (lineHeight(fontSize) + gap);
+    let x = pad;
+
+    for (const char of chars) {
+      ctx.fillText(char, x, y);
+      x += ctx.measureText(char).width + spacing;
     }
   });
 
-  const tex = new THREE.CanvasTexture(cnv);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.minFilter = THREE.LinearMipmapLinearFilter;
-  tex.magFilter = THREE.LinearFilter;
-  tex.generateMipmaps = true;
-  tex.needsUpdate = true;
-  return tex;
+  // Create Three.js texture
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.minFilter = THREE.LinearMipmapLinearFilter;
+  texture.magFilter = THREE.LinearFilter;
+  texture.generateMipmaps = true;
+  texture.needsUpdate = true;
+
+  return texture;
 }

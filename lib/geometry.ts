@@ -1,2 +1,7 @@
-export type Vec2 = { x: number; y: number };
-export const clamp = (n: number, a: number, b: number) => Math.max(a, Math.min(b, n));
+export interface Vec2 {
+  readonly x: number;
+  readonly y: number;
+}
+
+export const clamp = (value: number, min: number, max: number): number =>
+  Math.max(min, Math.min(max, value));
