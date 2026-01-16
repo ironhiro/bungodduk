@@ -19,7 +19,7 @@ export type CubeFieldRef = { reset:()=>void };
 const MIN_SIZE = 1;
 let idSeq = 1;
 
-export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(({ config }, ref)=>{
+export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(function CubeField({ config }, ref){
   const { size: viewport, clock } = useThree();
   const W = viewport.width, H = viewport.height;
 
@@ -95,7 +95,7 @@ export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(({ con
       c.y += c.vy * config.speedMul * dts;
       c.rx = (c.rx + c.rxSpeed * config.rotMul * dts) % 360;
       c.ry = (c.ry + c.rySpeed * config.rotMul * dts) % 360;
-      (c as any).cooldown = Math.max(0, ((c as any).cooldown ?? 0) - dts*1000);
+      c.cooldown = Math.max(0, (c.cooldown ?? 0) - dts*1000);
 
       let bounced=false; let axis: "x"|"y"|null = null;
       if(c.x < 0){ c.x=0; c.vx = Math.abs(c.vx) + Math.sign(c.vx||1) * config.bounceDeflect * Math.random(); bounced=true; axis="x"; }
@@ -104,8 +104,8 @@ export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(({ con
       if(c.y < 0){ c.y=0; c.vy = Math.abs(c.vy) + Math.sign(c.vy||1) * config.bounceDeflect * Math.random(); bounced=true; axis="y"; }
       else if(c.y + c.size > H){ c.y = H - c.size; c.vy = -Math.abs(c.vy) - Math.sign(c.vy||1)*config.bounceDeflect*Math.random(); bounced=true; axis="y"; }
 
-      if(bounced && ((c as any).cooldown ?? 0) <= 0){
-        (c as any).cooldown = 120;
+      if(bounced && (c.cooldown ?? 0) <= 0){
+        c.cooldown = 120;
         spawnImpact(c.x + c.size/2, c.y + c.size/2);
         const res = trySplit(c, axis!, config);
         if(res){
@@ -164,7 +164,7 @@ export const CubeField = forwardRef<CubeFieldRef, { config: CubeConfig }>(({ con
 function randIn(a:[number,number]){ return a[0] + Math.random()*(a[1]-a[0]); }
 function randSign(){ return Math.random()<0.5 ? -1 : 1; }
 
-function makeRandomCube(cfg: CubeConfig, W:number, H:number): CubeData & {vx:number; vy:number; rxSpeed:number; rySpeed:number}{
+function makeRandomCube(cfg: CubeConfig, W:number, H:number): CubeData {
   const sizeMin = Math.min(cfg.sizeMin, cfg.sizeMax);
   const sizeMax = Math.max(cfg.sizeMin, cfg.sizeMax);
   const size = Math.floor(randIn([sizeMin, sizeMax]));
@@ -177,7 +177,7 @@ function makeRandomCube(cfg: CubeConfig, W:number, H:number): CubeData & {vx:num
   return { id: ++idSeq, size, x, y, rx: Math.random()*360, ry: Math.random()*360, vx, vy, rxSpeed, rySpeed };
 }
 
-function trySplit(c: any, axis:"x"|"y", cfg: CubeConfig){
+function trySplit(c: CubeData, axis:"x"|"y", cfg: CubeConfig): { a: CubeData; b: CubeData } | null {
   if(c.size <= MIN_SIZE) return null;
   const half = Math.floor(c.size/2);
   if(half < MIN_SIZE) return null;
@@ -189,7 +189,7 @@ function trySplit(c: any, axis:"x"|"y", cfg: CubeConfig){
     rySpeed: c.rySpeed * (0.85 + Math.random()*0.5),
     rx: c.rx, ry: c.ry
   };
-  let a:any, b:any;
+  let a: CubeData, b: CubeData;
   if(axis==="x"){
     const mag = Math.max(Math.abs(c.vy), cfg.splitDeflect);
     a = { id: ++idSeq, ...base, vx: c.vx, vy:  mag };

@@ -3,7 +3,19 @@ import * as THREE from "three";
 import { useRef } from "react";
 import { useFrame } from "@react-three/fiber";
 
-export type CubeData = { id:number; size:number; x:number; y:number; rx:number; ry:number; };
+export type CubeData = {
+  id: number;
+  size: number;
+  x: number;
+  y: number;
+  rx: number;
+  ry: number;
+  vx: number;
+  vy: number;
+  rxSpeed: number;
+  rySpeed: number;
+  cooldown?: number;
+};
 
 export function CubeMesh({ id, getData, W, H, materials }:{
   id:number;

@@ -1,6 +1,7 @@
 "use client";
 import { Canvas } from "@react-three/fiber";
-import { Suspense, useRef, useState } from "react";
+import { Suspense, useRef, useState, useCallback } from "react";
+import * as THREE from "three";
 import ResponsiveOrtho from "@/components/ResponsiveOrtho";
 import { CubeField, CubeFieldRef, CubeConfig } from "@/components/CubeField";
 import SettingsPanel from "@/components/SettingsPanel";
@@ -16,10 +17,13 @@ export default function Page(){
   const [panelOpen,setPanelOpen]=useState(true);
   const fieldRef = useRef<CubeFieldRef>(null);
 
+  const onCreated = useCallback(({ scene }: { scene: THREE.Scene }) => {
+    scene.background = new THREE.Color("#273e81");
+  }, []);
+
   return (
     <>
-      <Canvas orthographic dpr={[1, Math.min(2, typeof window!=="undefined"? window.devicePixelRatio:1)]} style={{position:"fixed", inset:0}}>
-        <color attach="background" args={["#273e81"]} />
+      <Canvas orthographic dpr={[1, Math.min(2, typeof window!=="undefined"? window.devicePixelRatio:1)]} style={{position:"fixed", inset:0}} onCreated={onCreated}>
         <ResponsiveOrtho />
         <Suspense fallback={null}>
           <CubeField ref={fieldRef} config={cfg} />

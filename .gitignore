@@ -225,3 +225,64 @@ thumb
 sketch
 
 # End of https://www.toptal.com/developers/gitignore/api/node,react,nextjs
+
+### Security Sensitive ###
+# API keys and secrets
+*.key
+*.secret
+secrets.json
+secrets.yaml
+secrets.yml
+.secrets
+
+# AWS
+.aws/
+aws-credentials*
+credentials.json
+
+# SSH keys
+id_rsa
+id_rsa.pub
+id_ed25519
+id_ed25519.pub
+*.ppk
+
+# Certificates
+*.p12
+*.pfx
+*.crt
+*.cer
+
+# Database files
+*.sqlite
+*.sqlite3
+*.db
+
+### IDE / Editor ###
+# JetBrains (WebStorm, IntelliJ, etc.)
+.idea/
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Claude Code
+CLAUDE.local.md
+CLAUDE.md
+
+### OS ###
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+### Docker ###
+docker-compose.override.yml
+docker-compose.override.yaml
+
+### Local Config ###
+*.local.json
+*.local.yaml
+*.local.yml
+config.local.*
