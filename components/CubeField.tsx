@@ -42,13 +42,14 @@ export interface CubeFieldRef {
 
 interface CubeFieldProps {
   readonly config: CubeConfig;
+  readonly onGlitchChange?: (glitching: boolean) => void;
 }
 
 // Module-level state
 let idSeq = 1;
 
 export const CubeField = forwardRef<CubeFieldRef, CubeFieldProps>(
-  function CubeField({ config }, ref) {
+  function CubeField({ config, onGlitchChange }, ref) {
     const { size: viewport, clock } = useThree();
     const { width: W, height: H } = viewport;
 
@@ -215,6 +216,7 @@ export const CubeField = forwardRef<CubeFieldRef, CubeFieldProps>(
       // Trigger glitch effect if any cube is too small
       if (!glitchingRef.current && next.some((c) => c.size <= MIN_SIZE)) {
         glitchingRef.current = true;
+        onGlitchChange?.(true);
         cubesRef.current = [];
         setIds([]);
 
@@ -231,6 +233,7 @@ export const CubeField = forwardRef<CubeFieldRef, CubeFieldProps>(
           cubesRef.current = [seed];
           setIds([seed.id]);
           glitchingRef.current = false;
+          onGlitchChange?.(false);
         }, config.glitchMs);
         return;
       }

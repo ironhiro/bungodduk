@@ -90,7 +90,7 @@ export async function makeFaceCanvasTextureAsync(
   // Calculate font size
   const lineHeight = (fs: number) => fs * LINE_HEIGHT_MULTIPLIER;
   const setFont = (fs: number) => {
-    ctx.font = `900 ${fs}px ${family}`;
+    ctx.font = `950 ${fs}px ${family}`;
   };
 
   ctx.textBaseline = "alphabetic";
