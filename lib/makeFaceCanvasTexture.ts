@@ -19,23 +19,29 @@ function quoteFamily(family: string): string {
   return /[^a-zA-Z0-9_-]/.test(trimmed) ? `"${trimmed}"` : trimmed;
 }
 
+// Primary font for Korean text
+const PRIMARY_FONT = "Black Han Sans";
+
 /**
  * Resolve and load the preferred font family using FontFace API
  */
 async function resolveLoadedFamily(prefer?: string): Promise<string> {
-  const cssVar = getComputedStyle(document.documentElement)
-    .getPropertyValue("--font-black-han-sans")
-    ?.trim();
+  // Wait for all fonts to be ready first
+  await document.fonts.ready;
 
-  const candidates = [prefer?.trim(), cssVar, "Black Han Sans"].filter(
+  const candidates = [prefer?.trim(), PRIMARY_FONT].filter(
     (f): f is string => Boolean(f)
   );
+
+  // Test string includes Korean characters to ensure Korean glyphs are loaded
+  const testString = "붕오떡";
 
   for (const family of candidates) {
     const quoted = quoteFamily(family);
     try {
-      await document.fonts.load(`400 64px ${quoted}`);
-      if (document.fonts.check(`400 32px ${quoted}`)) {
+      // Load font with Korean test string
+      await document.fonts.load(`400 64px ${quoted}`, testString);
+      if (document.fonts.check(`400 64px ${quoted}`, testString)) {
         return quoted;
       }
     } catch {
